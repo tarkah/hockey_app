@@ -10,28 +10,32 @@ from twilio.rest import Client
 
 logger = logging.getLogger(__name__)
 
-local_tz = pytz.timezone('US/Pacific')
-today = datetime.now().strftime('%Y-%m-%d')
+# list format of phonenumbers
+PHONEBOOK = json.loads(os.environ['PHONEBOOK'])
 
-redis_url = os.getenv('REDIS_URL', '127.0.0.1')
-db = redis.StrictRedis.from_url(
-    redis_url, charset="utf-8", decode_responses=True)
-
-account_sid = os.getenv("TWIL_ACCOUNT_SID")
-auth_token = os.getenv("TWIL_AUTH_TOKEN")
-from_number = os.getenv("FROM_NUMBER")
-twilio_client = Client(account_sid, auth_token)
-
-phonebook = json.loads(os.environ['PHONEBOOK'])
-
-team_id = 54  # find id from http://statsapi.web.nhl.com/api/v1/teams
+# hockey API settings
+# API returns times in UTC, need localizing
+LOCAL_TZ = pytz.timezone('US/Pacific')
+TEAM_ID = 54  # find id from http://statsapi.web.nhl.com/api/v1/teams
 base_url = 'http://statsapi.web.nhl.com'
 schedule_link = '/api/v1/schedule'
 team_link = '/api/v1/teams'
 
+# twilio setup
+ACCOUNT_SID = os.getenv("TWIL_ACCOUNT_SID")
+AUTH_TOKEN = os.getenv("TWIL_AUTH_TOKEN")
+FROM_NUMBER = os.getenv("FROM_NUMBER")
+twilio_client = Client(ACCOUNT_SID, AUTH_TOKEN)
+
+# redis setup
+redis_url = os.getenv('REDIS_URL', '127.0.0.1')
+db = redis.StrictRedis.from_url(
+    redis_url, charset="utf-8", decode_responses=True)
+
 
 def main():
-    game_state = todays_schedule()
+    today = datetime.now().strftime('%Y-%m-%d')
+    game_state = todays_schedule(today)
 
     if game_state is None:
         print('No game scheduled today - {}'.format(today))
@@ -65,9 +69,9 @@ def get_response(link, params):
     return response.json()
 
 
-def todays_schedule():
+def todays_schedule(today):
     print('Checking for today - {}'.format(today))
-    params = {'teamId': team_id, 'startDate': today, 'endDate': today}
+    params = {'teamId': TEAM_ID, 'startDate': today, 'endDate': today}
     data = get_response(schedule_link, params)
     if data['totalGames'] == 0:
         return None
@@ -83,14 +87,14 @@ def todays_schedule():
         else:
             game_date_utc = pytz.utc.localize(
                 datetime.strptime(game['gameDate'], "%Y-%m-%dT%H:%M:%SZ"))
-            game_date_local = game_date_utc.astimezone(local_tz)
+            game_date_local = game_date_utc.astimezone(LOCAL_TZ)
             game_date_str = game_date_local.strftime("%m/%d/%Y")
             game_time_str = game_date_local.strftime("%I:%M %p")
             game_link = game['link']
 
             game_venue = game['venue']['name']
 
-            if team_id == game['teams']['home']['team']['id']:
+            if TEAM_ID == game['teams']['home']['team']['id']:
                 my_field = 'home'
                 opp_field = 'away'
             else:
@@ -99,7 +103,7 @@ def todays_schedule():
 
             opp_id = game['teams'][opp_field]['team']['id']
 
-            get_team_values(team_id, 'my')
+            get_team_values(TEAM_ID, 'my')
             get_team_values(opp_id, 'opp')
 
             db.set('game_date_str', game_date_str)
@@ -146,9 +150,9 @@ def pre_game():
             message = 'The {} play the {} on the road at {}!  Game starts at {}.'.format(my_team_name, opp_full_name,
                                                                                          game_venue, game_time_str)
 
-        for to_number in phonebook:
+        for to_number in PHONEBOOK:
             twilio_client.messages.create(
-                body=message, to=to_number, from_=from_number)
+                body=message, to=to_number, from_=FROM_NUMBER)
         print(message)
 
         db.set('pre_sent', 'Yes')
@@ -204,7 +208,7 @@ def in_game():
             db.set('past_scores', json.dumps(past_scores))
 
         if game_winning:
-            if team_id == play['team']['id']:
+            if TEAM_ID == play['team']['id']:
                 message = '{} wins!!\n\n{} {}, {} {} - {} {}\n\n{}'.format(my_team_name, scoring_time,
                                                                            scoring_period, my_abbrev,
                                                                            my_score, opp_abbrev,
@@ -215,7 +219,7 @@ def in_game():
                                                                             my_score, opp_abbrev,
                                                                             opp_score, description)
         else:
-            if team_id == play['team']['id']:
+            if TEAM_ID == play['team']['id']:
                 message = '{} score!!\n\n{} {}, {} {} - {} {}\n\n{}'.format(my_team_name, scoring_time,
                                                                             scoring_period, my_abbrev,
                                                                             my_score, opp_abbrev,
@@ -226,9 +230,9 @@ def in_game():
                                                                              my_score, opp_abbrev,
                                                                              opp_score, description)
 
-        for to_number in phonebook:
+        for to_number in PHONEBOOK:
             twilio_client.messages.create(
-                body=message, to=to_number, from_=from_number)
+                body=message, to=to_number, from_=FROM_NUMBER)
         print(message)
 
         scoring_plays_notified.append(score)
