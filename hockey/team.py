@@ -1,7 +1,12 @@
+import logging
+
 import requests
+
 from concurrent.futures import ThreadPoolExecutor
 
 from hockey.constants import BASE_URL, TEAM_LINK
+
+log = logging.getLogger(__name__)
 
 
 class Team():
@@ -9,9 +14,13 @@ class Team():
         self.id = id_
         self._get_team_data()
         self._store_team_data()
+        log.info('{} initiated'.format(self.__repr__()))
 
     def __repr__(self):
         return 'Team({})'.format(self.name)
+
+    def __str__(self):
+        return '{}'.format(self.full_name)
 
     def _get_team_data(self):
         url = BASE_URL + '/'.join([TEAM_LINK, str(self.id)])
