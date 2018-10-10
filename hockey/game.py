@@ -52,8 +52,8 @@ def get_todays_games():
 
 def all_teams(games):
     '''Returns a list of Team objects the supplied list of Game objects'''
-    team_ids = []
+    teams = []
     for game in games:
-        team_ids.append(game.home_team)
-        team_ids.append(game.away_team)
-    return team_ids
+        teams.append(game.home_team)
+        teams.append(game.away_team)
+    return teams
