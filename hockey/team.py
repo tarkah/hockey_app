@@ -1,8 +1,7 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
-BASE_URL = 'https://statsapi.web.nhl.com'
-TEAM_LINK = '/api/v1/teams'
+from constants import BASE_URL, TEAM_LINK
 
 
 class Team():
@@ -47,6 +46,7 @@ def get_teams(team_ids):
     with ThreadPoolExecutor(max_workers=50) as pool:
         teams = list(pool.map(get_team, [team_id for team_id in team_ids]))
         return teams
+
 
 if __name__ == "__main__":
     team_ids = all_team_ids()
