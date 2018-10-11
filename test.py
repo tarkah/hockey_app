@@ -32,24 +32,29 @@ logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %
 log = logging.getLogger(__name__)
 
 
+def game_loop_break(games):
+    time.sleep(1)
+    key_press = None
+    while key_press is None:
+        key_press = input("Press enter to finish game loops\n")
+
+    for game_ in games:
+        game_.is_finished = True
+
+
 def main():
     '''
     Main loop will get all of today\'s games, start a control thread which will
-    kick off each game into it\'s own daemon thread. Once all games have finished,
+    kick off each game into it\'s own thread. Once all games have finished,
     control thread will finish and program will exit.
     '''
     games = game.get_todays_games()
-    game.start_all_games(games)
-    time.sleep(1)
-    for game_ in games:
-        print('\t' + game_.home_team.name, 'face',
-              game_.away_team.name, '@',
-              game_.date.astimezone(LOCAL_TZ).strftime("%I:%M%p"),
-              '(' + game_.date.astimezone(LOCAL_TZ).tzname() + ')')
-        i = random.randint(1, 1)
-        time.sleep(i)
-        game_.is_finished = True
-    time.sleep(1)
+    all_games_thread = game.start_all_games(games)
+
+    game_loop_break(games)
+
+    all_games_thread.join()
+
     log.info('Program exiting')
 
 
