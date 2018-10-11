@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
 
 from hockey.team import Team
-from hockey.constants import BASE_URL, GAME_LINK, SCHEDULE_LINK, GAME_CYCLE_TIME
+from hockey.constants import BASE_URL, GAME_LINK, SCHEDULE_LINK, MIN_GAME_CYCLE_TIME
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ class Game(Thread):
             # DO STUFF HERE
             end_time = time.time()
             time_delta = end_time - start_time
-            if GAME_CYCLE_TIME > time_delta:
-                sleep_time = GAME_CYCLE_TIME - time_delta
+            if MIN_GAME_CYCLE_TIME > time_delta:
+                sleep_time = MIN_GAME_CYCLE_TIME - time_delta
                 time.sleep(sleep_time)
             else:
                 sleep_time = 0
