@@ -51,6 +51,7 @@ def main():
     games = game.get_todays_games()
     all_games_thread = game.start_all_games(games)
 
+    # temporary to test loop and break it, games will finish on their own once implemented
     game_loop_break(games)
 
     all_games_thread.join()
