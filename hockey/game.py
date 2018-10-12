@@ -57,6 +57,9 @@ class Game(Thread):
         date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
         self.date = pytz.utc.localize(date)
 
+    def _store_live_data(self):
+        return
+
     def loop(self):
         while not self.is_finished:
             start_time = time.time()
@@ -82,15 +85,27 @@ class Game(Thread):
         log.info('{} has finished'.format(self.__repr__()))
 
 
-def get_todays_games():
-    '''Returns a list of Games for today's schedule'''
+def get_todays_games(**kwargs):
+    '''
+    Returns a list of Games for today's schedule.  If no games are scheduled, will return None.
+
+    **kwargs
+    asofdate - can be provided in format "%Y-%m-%d" to overide today's date.
+    '''
+    today_default = datetime.now().strftime('%Y-%m-%d')
+    asofdate = kwargs.get('asofdate', today_default)
     url = BASE_URL + SCHEDULE_LINK
-    r = requests.get(url)
+    params = {'startDate': asofdate, 'endDate': asofdate}
+    r = requests.get(url, params=params)
     data = r.json()
-    with ThreadPoolExecutor(max_workers=100) as pool:
-        games = list(pool.map(Game, [game['gamePk']
-                                     for game in data['dates'][0]['games']]))
-    return games
+    try:
+        game_ids = [game['gamePk'] for game in data['dates'][0]['games']]
+        with ThreadPoolExecutor(max_workers=100) as pool:
+            games = list(pool.map(Game, game_ids))
+        return games
+    except IndexError:
+        log.warning('No games scheduled today')
+        return None
 
 
 def all_teams(games):

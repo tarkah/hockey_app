@@ -48,7 +48,10 @@ def main():
     kick off each game into it\'s own thread. Once all games have finished,
     control thread will finish and program will exit.
     '''
-    games = game.get_todays_games()
+    games = game.get_todays_games(asofdate='2018-10-11')
+    if games is None:
+        return
+
     all_games_thread = game.start_all_games(games)
 
     # temporary to test loop and break it, games will finish on their own once implemented
